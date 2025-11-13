@@ -1,4 +1,4 @@
-from lab1 import sqr
+from exercise_1 import sqr
 def test_sqr1():
   assert sqr(2) == 4
 def test_sqr2():
