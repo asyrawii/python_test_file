@@ -1,3 +1,5 @@
+# Write a Python3 function *check_odd_even(n)* that returns "Odd" or "Even"
+
 from exercise_4 import check_odd_even
 import pytest
 
