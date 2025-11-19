@@ -1,4 +1,10 @@
-#Disclaimer :- This is from ChatGPT
+# Disclaimer :- This is from ChatGPT
+# Write a Python3 function *print_hello()* that prints "Hello world!".
+"""Sample code
+def print_hello():
+    print("Hello world!")
+"""
+
 
 from exercise import print_hello  # import your function
 
