@@ -12,7 +12,7 @@ def test_function_header():
 
     # Check function name
     assert isinstance(func, ast.FunctionDef)
-    assert func.name == "calc_area"
+    assert func.name == "my_function1"
 
     # Check exactly 2 parameters
     assert len(func.args.args) == 2
