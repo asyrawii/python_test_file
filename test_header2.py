@@ -1,74 +1,124 @@
 import ast
 import re
+import tokenize
+import io
+import pytest
+
 
 def test_function_header():
 
     with open("header2.py", encoding="utf-8-sig") as f:
-        header = f.read().strip()
+        source = f.read()
 
-    # 1. Check empty answer
-    assert header, "Your answer is empty."
+    errors = []
 
-    # 2. Check 'def' keyword
-    assert re.match(r"^def\b", header), (
-        "Missing or incorrect 'def' keyword. "
-        "A function definition must start with 'def'."
-    )
+    # Ignore docstrings, comments, and blank lines
+    lines = []
 
-    # 3. Check function name
-    match = re.match(r"^def\s+([a-zA-Z_]\w*)", header)
+    tokens = tokenize.generate_tokens(io.StringIO(source).readline)
 
-    assert match, (
-        "Invalid function name or missing space after 'def'."
-    )
-
-    function_name = match.group(1)
-
-    assert function_name == "my_function2", (
-        f"Incorrect function name '{function_name}'. "
-        "Expected 'my_function2'."
-    )
-
-    # 4. Check parentheses
-    assert "(" in header, (
-        "Missing opening parenthesis '('."
-    )
-
-    assert ")" in header, (
-        "Missing closing parenthesis ')'."
-    )
-
-    # 5. Check colon
-    assert header.endswith(":"), (
-        "Missing colon ':' at the end of the function header."
-    )
-
-    # 6. Check Python syntax
     try:
-        tree = ast.parse(header + "\n    pass")
-    except SyntaxError as e:
-        assert False, f"Invalid Python syntax: {e.msg}"
+        for token in tokens:
+            if token.type in (
+                tokenize.STRING,
+                tokenize.COMMENT,
+                tokenize.NL,
+                tokenize.NEWLINE,
+                tokenize.ENDMARKER
+            ):
+                continue
 
-    func = tree.body[0]
+            if token.line.strip():
+                if token.start[0] not in [n for n, _ in lines]:
+                    lines.append((token.start[0], token.line.strip()))
 
-    assert isinstance(func, ast.FunctionDef), (
-        "Invalid function definition."
+    except (tokenize.TokenError, IndentationError):
+        pass
+
+    if not lines:
+        pytest.fail("No function header found.", pytrace=False)
+
+    # Get the first actual code line
+    header = lines[0][1]
+
+    # Check def keyword
+    if not re.match(r"^def\b", header):
+        errors.append("Missing or incorrect 'def' keyword.")
+
+    # Check function name
+    match = re.match(
+        r"^(?:\w+\s+)?([a-zA-Z_]\w*)\s*\(",
+        header
     )
 
-    # 7. Check parameters
-    params = [arg.arg for arg in func.args.args]
+    if match:
+        name = match.group(1)
 
-    assert params == ["x", "y"], (
-        f"Incorrect parameters {params}. "
-        "Expected parameters ['x', 'y'] in that order."
-    )
+        if name != "my_function2":
+            errors.append(
+                f"Incorrect function name '{name}'. "
+                "Expected 'my_function2'."
+            )
+    else:
+        errors.append("Unable to identify the function name.")
 
-    # 8. Reject additional parameter types/defaults
-    assert (
-        not func.args.posonlyargs
-        and not func.args.kwonlyargs
-        and func.args.vararg is None
-        and func.args.kwarg is None
-        and not func.args.defaults
-        and not func.args.kw_defaults
-    ), "Only two ordinary parameters, x and y, are allowed."
+    # Check parentheses
+    if "(" not in header:
+        errors.append("Missing opening parenthesis '('.")
+
+    if ")" not in header:
+        errors.append("Missing closing parenthesis ')'.")
+
+    # Check colon
+    if not header.endswith(":"):
+        errors.append("Missing colon ':'.")
+
+    # Check parameters
+    if "(" in header and ")" in header:
+        start = header.index("(")
+        end = header.index(")", start)
+
+        params = [
+            p.strip()
+            for p in header[start + 1:end].split(",")
+        ]
+
+        if params != ["x", "y"]:
+            errors.append(
+                "Incorrect parameters. Expected (x, y)."
+            )
+
+    # Check Python syntax
+    if not errors:
+        try:
+            tree = ast.parse(header + "\n    pass")
+            func = tree.body[0]
+
+            if not isinstance(func, ast.FunctionDef):
+                errors.append("Invalid function definition.")
+
+            elif (
+                func.args.posonlyargs
+                or func.args.kwonlyargs
+                or func.args.vararg is not None
+                or func.args.kwarg is not None
+                or func.args.defaults
+                or func.args.kw_defaults
+            ):
+                errors.append(
+                    "Only two ordinary parameters, x and y, are allowed."
+                )
+
+        except SyntaxError as e:
+            errors.append(f"Invalid Python syntax: {e.msg}")
+
+    if errors:
+        feedback = "\n".join(
+            f"{i}. {error}"
+            for i, error in enumerate(errors, 1)
+        )
+
+        pytest.fail(
+            "\nFUNCTION HEADER ERRORS:\n" + feedback,
+            pytrace=False
+        )
