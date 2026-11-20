@@ -11,7 +11,7 @@ import pytest
 
 def test_print_hello():
 
-    with open("header3.py", encoding="utf-8-sig") as f:
+    with open("exercise.py", encoding="utf-8-sig") as f:
         source = f.read()
 
     errors = []
