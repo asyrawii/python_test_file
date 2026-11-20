@@ -6,7 +6,7 @@ import pytest
 
 def test_check_odd_even():
 
-    with open("exercise_5.py", encoding="utf-8-sig") as f:
+    with open("exercise_4.py", encoding="utf-8-sig") as f:
         source = f.read()
 
     errors = []
